@@ -862,6 +862,13 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
 
             // 路径 B：VSCode Claude 扩展
             if (!success) {
+                // Suppress line sync from the temporary text editor: it opens with the
+                // cursor on line 1, which would scroll the WYSIWYG view back to the top
+                this.suppressNavFromTextEditor();
+                // Keep onDidChangeTabs from swapping the temporary text editor back to WYSIWYG
+                MarkdownEditorProvider.suppressAutoSwitch.add(
+                    document.uri.toString(),
+                );
                 // Fix 3：临时文本编辑器在同列打开（避免新建列导致布局闪烁）
                 // 使用 preview: false 避免替换处于预览状态的 custom editor tab
                 const textDoc = await vscode.workspace.openTextDocument(
@@ -902,6 +909,7 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
                         "claude-vscode.editor.openLast",
                     );
                     await new Promise((r) => setTimeout(r, 700));
+                    this.suppressNavFromTextEditor();
                     await vscode.window.showTextDocument(textDoc, {
                         viewColumn: textEditor.viewColumn,
                         preview: false,
@@ -935,6 +943,13 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
         } catch (_e) {
             console.log("[sendToClaudeChat] 失败:", _e);
         }
+        setTimeout(
+            () =>
+                MarkdownEditorProvider.suppressAutoSwitch.delete(
+                    document.uri.toString(),
+                ),
+            500,
+        );
 
         if (!success) {
             // 路径 C：兜底 VSCode 内置 chat
