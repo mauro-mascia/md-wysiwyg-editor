@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.3.3] - 2026-10-07
+
+### Fixed
+
+- **Send to Claude line numbers after edits**: the source snapshot used to resolve line numbers is now refreshed on every save together with the line map. Previously it was refreshed only on open and on external changes, so line references went stale after editing in the WYSIWYG view (for example after reflowing lines).
+
+---
+
 ## [0.3.2] - 2026-08-03
 
 ### Added
