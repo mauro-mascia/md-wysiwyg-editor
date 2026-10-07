@@ -790,13 +790,7 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
                         // 写盘完成后再记录时间，确保 FileWatcher 触发时时间戳是准确的
                         // （如果在 save 之前记录，FileWatcher 延迟 > 1500ms 时保护会失效）
                         this._lastSaveTimes.set(uriKey, Date.now());
-                        const panel = this._webviewPanels.get(uriKey);
-                        if (panel) {
-                            panel.webview.postMessage({
-                                type: "lineMapUpdate",
-                                lineMap: computeLineMap(document.getText()),
-                            });
-                        }
+                        this._postLineMapUpdate(document, uriKey);
                     } finally {
                         cts.dispose();
                     }
@@ -983,13 +977,7 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
         }
         this._lastSaveTimes.set(uriKey, Date.now());
         await document.save(cancellation);
-        const panel = this._webviewPanels.get(uriKey);
-        if (panel) {
-            panel.webview.postMessage({
-                type: "lineMapUpdate",
-                lineMap: computeLineMap(document.getText()),
-            });
-        }
+        this._postLineMapUpdate(document, uriKey);
     }
 
     async saveCustomDocumentAs(
@@ -1271,6 +1259,31 @@ export class MarkdownEditorProvider implements vscode.CustomEditorProvider<Markd
         }
 
         return vscode.Uri.file(resolved);
+    }
+
+    /**
+     * 保存后同步 WebView 的行号映射和源码快照。
+     * 源码快照必须一起更新：「发送选区到 Claude」按它搜索行号，只刷新 lineMap 会在编辑后得到过期行号。
+     */
+    private _postLineMapUpdate(
+        document: MarkdownDocument,
+        uriKey: string,
+    ): void {
+        const panel = this._webviewPanels.get(uriKey);
+        if (!panel) {
+            return;
+        }
+        const text = document.getText();
+        panel.webview.postMessage({
+            type: "lineMapUpdate",
+            lineMap: computeLineMap(text),
+            content: this._prepareContentForDisplay(
+                text,
+                document,
+                panel,
+                uriKey,
+            ),
+        });
     }
 
     private _prepareContentForDisplay(
