@@ -172,6 +172,7 @@ export function createMessageHandlers(
         },
         lineMapUpdate(msg) {
             setLineMap(msg.lineMap);
+            setMarkdownSource(msg.content);
         },
         setDebugMode(msg) {
             setDebugMode(msg.enabled);
